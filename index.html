@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="format-detection" content="telephone=no">
+  <title>看護業務支援システム (PWA・NEWS2・転倒リスク・AI連携)</title>
+
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="看護AI支援">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      line-height: 1.5;
+      padding: 12px;
+      font-size: 16px;
+      touch-action: manipulation;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: white;
+      padding: 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    header h1 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    header p {
+      font-size: 12px;
+      opacity: 0.95;
+    }
+
+    /* PWAインストール案内バー */
+    .pwa-banner {
+      display: none;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #1e40af;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 動作確認テストボックス */
+    .test-box {
+      background: #dcfce7;
+      border: 2px solid #22c55e;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .test-box p {
+      font-size: 13px;
+      color: #15803d;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .btn-test {
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .btn-test:active {
+      background: #15803d;
+    }
+
+    /* カード */
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #0369a1;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #e0f2fe;
+      padding-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* フォーム項目 */
+    .field {
+      margin-bottom: 12px;
+    }
+    .field:last-child {
+      margin-bottom: 0;
+    }
+    label.field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: bold;
+      color: #334155;
+      margin-bottom: 4px;
+    }
+    .req {
+      color: #dc2626;
+      font-weight: bold;
+    }
+
+    /* 入力欄（iPhone / Android 共通仕様） */
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      height: 46px;
+      padding: 8px 10px;
+      font-size: 16px;
+      border: 1.5px solid #94a3b8;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #0f172a;
+      outline: none;
+      -webkit-appearance: none;
+      touch-action: manipulation;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+    textarea {
+      height: 90px;
+      resize: vertical;
+    }
+    input:focus, textarea:focus {
+      border-color: #0284c7;
+      background: #f0f9ff;
+    }
+
+    /* 異常バイタル時の赤色強調 */
+    .input-abnormal {
+      border-color: #ef4444 !important;
+      background-color: #fef2f2 !important;
+      color: #b91c1c !important;
+      font-weight: bold;
+    }
+
+    /* 異常バイタル警告バナー */
+    .vital-alert-box {
+      display: none;
+      background: #fef2f2;
+      border: 2px solid #ef4444;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    .vital-alert-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #991b1b;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .vital-alert-item {
+      display: inline-block;
+      background: #dc2626;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin: 2px 4px 2px 0;
+    }
+
+    .row-2 {
+      display: flex;
+      gap: 10px;
+    }
+    .col {
+      flex: 1;
+    }
+
+    /* 選択肢ボタンスタイル（ネイティブ input + label） */
+    .choice-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .choice-item {
+      flex: 1;
+      min-width: 68px;
+      position: relative;
+    }
+    .choice-item input[type="radio"],
+    .choice-item input[type="checkbox"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      z-index: 2;
+      cursor: pointer;
+      margin: 0;
+      -webkit-appearance: none;
+    }
+    .choice-item label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 44px;
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #334155;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      text-align: center;
+      margin: 0;
+      padding: 2px 4px;
+      line-height: 1.25;
+      transition: background-color 0.1s, border-color 0.1s, color 0.1s;
+    }
+    .choice-item input:checked + label {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #ffffff;
+    }
+
+    /* 意識レベル用グリッド */
+    .consciousness-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    /* クイックチップボタン */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .chip {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: #334155;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .chip:active {
+      background: #e2e8f0;
+    }
+
+    /* 既往歴グリッド (20疾患) */
+    .history-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .history-item {
+      position: relative;
+      width: 100%;
+    }
+    .history-item input[type="checkbox"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      z-index: 2;
+      cursor: pointer;
+      margin: 0;
+      -webkit-appearance: none;
+    }
+    .history-item label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 6px 6px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #334155;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      text-align: center;
+      line-height: 1.25;
+      margin: 0;
+      transition: background-color 0.1s, border-color 0.1s, color 0.1s;
+    }
+    .history-item input:checked + label {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #ffffff;
+    }
+
+    /* 状態・転倒リスク用チェックリスト */
+    .fall-risk-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .fall-check-item {
+      position: relative;
+      width: 100%;
+    }
+    .fall-check-item input[type="checkbox"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      z-index: 2;
+      cursor: pointer;
+      margin: 0;
+    }
+    .fall-check-item label {
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #334155;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      transition: background-color 0.1s, border-color 0.1s, color 0.1s;
+    }
+    .fall-check-item input:checked + label {
+      background: #fee2e2;
+      border-color: #ef4444;
+      color: #991b1b;
+    }
+
+    /* リスク表示カード（NEWS2 & 転倒リスク） */
+    .score-card {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .score-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #334155;
+    }
+    .score-sub {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .score-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .score-badge-low {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .score-badge-med {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+    .score-badge-high {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }
+
+    /* BMI表示エリア */
+    .bmi-card {
+      background: #ecfdf5;
+      border: 2px solid #86efac;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bmi-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #166534;
+    }
+    .bmi-sub {
+      font-size: 11px;
+      color: #15803d;
+    }
+    .bmi-val {
+      font-size: 26px;
+      font-weight: bold;
+      color: #0284c7;
+      text-align: right;
+    }
+    .bmi-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    /* AIモデル選択タブ */
+    .ai-selector {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .ai-tabs {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .ai-tab-item {
+      flex: 1;
+      position: relative;
+    }
+    .ai-tab-item input[type="radio"] {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0; z-index: 2; cursor: pointer; margin: 0;
+    }
+    .ai-tab-item label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 42px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #475569;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .ai-tab-item input:checked + label {
+      color: white;
+    }
+    #aiChatGPT:checked + label {
+      background: #10a37f;
+      border-color: #10a37f;
+    }
+    #aiClaude:checked + label {
+      background: #c2410c;
+      border-color: #c2410c;
+    }
+    #aiCopilot:checked + label {
+      background: #0284c7;
+      border-color: #0284c7;
+    }
+
+    /* プロンプトボックス */
+    .prompt-box {
+      width: 100%;
+      height: 240px;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 8px;
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      color: #0f172a;
+    }
+
+    /* 下部ボタングループ */
+    .action-container {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-copy {
+      height: 48px;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .btn-copy:active {
+      background: #047857;
+    }
+    .btn-open-ai {
+      height: 48px;
+      background: #10a37f;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.15s;
+    }
+    .btn-open-ai-same {
+      height: 42px;
+      background: #f1f5f9;
+      color: #0369a1;
+      border: 1.5px solid #0284c7;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+  </style>
+</head>
+<body ontouchstart="">
+
+  <!-- ヘッダー -->
+  <header>
+    <h1>看護支援AI プロンプト作成</h1>
+    <p>NEWS2スコア・転倒リスク・バイタル異常警告・PWA対応</p>
+  </header>
+
+  <!-- PWAインストールガイド -->
+  <div class="pwa-banner" id="pwaBanner">
+    <span>📲 ホーム画面に追加してアプリとして使えます</span>
+    <button type="button" class="chip" style="background:#2563eb; color:white; border:none;" onclick="showPwaGuide()">方法</button>
+  </div>
+
+  <!-- 動作確認ボックス -->
+  <div class="test-box">
+    <p>▼ 動作テスト（タップで即反映） ▼</p>
+    <button type="button" class="btn-test" onclick="runTest()">
+      📝 サンプルデータを自動入力する
+    </button>
+  </div>
+
+  <!-- BMI自動計算バナー -->
+  <div class="bmi-card">
+    <div>
+      <div class="bmi-title">BMI (体格指数) 自動算出</div>
+      <div class="bmi-sub">適正体重: <span id="idealWeightText">-</span> kg</div>
+    </div>
+    <div style="text-align: right;">
+      <div class="bmi-val" id="bmiDisplay">--.-</div>
+      <div class="bmi-badge" id="bmiBadge">未入力</div>
+    </div>
+  </div>
+
+  <!-- 1. 患者基本情報 -->
+  <div class="card">
+    <div class="card-title">1. 患者基本情報 & 身体計測</div>
+    
+    <!-- 性別 -->
+    <div class="field">
+      <label class="field-label">性別 <span class="req">*</span></label>
+      <div class="choice-row">
+        <div class="choice-item">
+          <input type="radio" id="gM" name="genderRadio" value="男性" checked onchange="updateAll()">
+          <label for="gM">男性</label>
+        </div>
+        <div class="choice-item">
+          <input type="radio" id="gF" name="genderRadio" value="女性" onchange="updateAll()">
+          <label for="gF">女性</label>
+        </div>
+        <div class="choice-item">
+          <input type="radio" id="gO" name="genderRadio" value="その他" onchange="updateAll()">
+          <label for="gO">その他</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 年齢 -->
+    <div class="field">
+      <label class="field-label" for="ageInput">年齢 (歳) <span class="req">*</span></label>
+      <input type="number" id="ageInput" placeholder="例: 76" oninput="updateAll()">
+      <div class="chips">
+        <button type="button" class="chip" onclick="setAge(65)">60代半ば</button>
+        <button type="button" class="chip" onclick="setAge(72)">70代前半</button>
+        <button type="button" class="chip" onclick="setAge(78)">70代後半</button>
+        <button type="button" class="chip" onclick="setAge(85)">80代</button>
+      </div>
+    </div>
+
+    <!-- 身長・体重 -->
+    <div class="row-2">
+      <div class="col">
+        <label class="field-label" for="heightInput">身長 (cm) <span class="req">*</span></label>
+        <input type="number" step="0.1" id="heightInput" placeholder="165.0" oninput="updateAll()">
+      </div>
+      <div class="col">
+        <label class="field-label" for="weightInput">体重 (kg) <span class="req">*</span></label>
+        <input type="number" step="0.1" id="weightInput" placeholder="62.5" oninput="updateAll()">
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. バイタルサイン (血圧・心拍数・呼吸数・体温・SpO2・意識) -->
+  <div class="card">
+    <div class="card-title">
+      <span>2. バイタルサイン</span>
+      <span style="font-size:11px; font-weight:normal; color:#64748b;">異常値は自動で赤色警告</span>
+    </div>
+
+    <!-- バイタル異常警告バナー -->
+    <div id="vitalAlertBox" class="vital-alert-box">
+      <div class="vital-alert-title">
+        <span>🚨 バイタルサイン異常アラート</span>
+      </div>
+      <div id="vitalAlertList"></div>
+    </div>
+    
+    <!-- 血圧 -->
+    <div class="row-2">
+      <div class="col">
+        <label class="field-label" for="bpSysInput">血圧最高 SBP (mmHg)</label>
+        <input type="number" id="bpSysInput" placeholder="138" oninput="updateAll()">
+      </div>
+      <div class="col">
+        <label class="field-label" for="bpDiaInput">血圧最低 DBP (mmHg)</label>
+        <input type="number" id="bpDiaInput" placeholder="82" oninput="updateAll()">
+      </div>
+    </div>
+    <div class="chips">
+      <button type="button" class="chip" onclick="setBp(120, 75)">120/75</button>
+      <button type="button" class="chip" onclick="setBp(135, 82)">135/82</button>
+      <button type="button" class="chip" onclick="setBp(148, 88)">148/88</button>
+      <button type="button" class="chip" onclick="setBp(186, 96)" style="color:#b91c1c;">186/96 (高値警告)</button>
+    </div>
+
+    <!-- 心拍数 & 呼吸数 -->
+    <div class="row-2" style="margin-top: 10px;">
+      <div class="col">
+        <label class="field-label" for="hrInput">心拍数 HR (bpm)</label>
+        <input type="number" id="hrInput" placeholder="74" oninput="updateAll()">
+      </div>
+      <div class="col">
+        <label class="field-label" for="respInput">呼吸数 (回/分)</label>
+        <input type="number" id="respInput" placeholder="16" oninput="updateAll()">
+      </div>
+    </div>
+    <div class="chips">
+      <button type="button" class="chip" onclick="setHr(72)">HR 72</button>
+      <button type="button" class="chip" onclick="setHr(125)" style="color:#b91c1c;">HR 125(頻脈警告)</button>
+      <button type="button" class="chip" onclick="setResp(16)">呼吸 16</button>
+      <button type="button" class="chip" onclick="setResp(30)" style="color:#b91c1c;">呼吸 30(頻呼吸警告)</button>
+    </div>
+
+    <!-- 体温 & SpO2 -->
+    <div class="row-2" style="margin-top: 10px;">
+      <div class="col">
+        <label class="field-label" for="tempInput">体温 (℃)</label>
+        <input type="number" step="0.1" id="tempInput" placeholder="36.5" oninput="updateAll()">
+      </div>
+      <div class="col">
+        <label class="field-label" for="spo2Input">SpO2 (%)</label>
+        <input type="number" id="spo2Input" placeholder="96" min="50" max="100" oninput="updateAll()">
+      </div>
+    </div>
+    <div class="chips">
+      <button type="button" class="chip" onclick="setTemp(36.6)">36.6℃</button>
+      <button type="button" class="chip" onclick="setTemp(38.2)">38.2℃(発熱)</button>
+      <button type="button" class="chip" onclick="setSpo2(98)">98%</button>
+      <button type="button" class="chip" onclick="setSpo2(94)">94%</button>
+      <button type="button" class="chip" onclick="setSpo2(88)" style="color:#b91c1c;">88%(低酸素警告)</button>
+    </div>
+
+    <!-- SpO2 測定条件（室内空気 / O2吸入 何L/分） -->
+    <div style="margin-top: 10px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 8px 10px;">
+      <div style="font-weight: bold; font-size: 13px; color: #1e293b; margin-bottom: 6px;">
+        SpO2 測定条件（呼吸・酸素投与）
+      </div>
+      <div class="choice-row">
+        <div class="choice-item">
+          <input type="radio" id="o2Air" name="o2Radio" value="室内空気" checked onchange="onOxygenChange()">
+          <label for="o2Air">室内空気</label>
+        </div>
+        <div class="choice-item">
+          <input type="radio" id="o2Inhale" name="o2Radio" value="O2吸入" onchange="onOxygenChange()">
+          <label for="o2Inhale">O2吸入</label>
+        </div>
+      </div>
+
+      <div id="o2FlowRow" style="display: none; margin-top: 8px; align-items: center; gap: 8px;">
+        <span style="font-size: 13px; font-weight: bold; color: #334155;">吸入量:</span>
+        <input type="number" step="0.5" id="o2FlowInput" placeholder="例: 2" value="2" style="width: 70px; height: 38px; padding: 4px; font-size: 15px; text-align: center; font-weight: bold;" oninput="updateAll()">
+        <span style="font-size: 13px; color: #475569;">L/分</span>
+        <div class="chips" style="margin-left: auto;">
+          <button type="button" class="chip" onclick="setO2Flow(1)">1L</button>
+          <button type="button" class="chip" onclick="setO2Flow(2)">2L</button>
+          <button type="button" class="chip" onclick="setO2Flow(3)">3L</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 意識レベル (ACVPUスケール) -->
+    <div style="margin-top: 12px;">
+      <label class="field-label">意識レベル (ACVPUスケール)</label>
+      <div class="consciousness-grid">
+        <div class="choice-item">
+          <input type="radio" id="cAlert" name="consciousnessRadio" value="清明(Alert)" checked onchange="updateAll()">
+          <label for="cAlert">清明 (Alert)</label>
+        </div>
+        <div class="choice-item">
+          <input type="radio" id="cConfusion" name="consciousnessRadio" value="混乱(Confusion)" onchange="updateAll()">
+          <label for="cConfusion">混乱 (Confusion)</label>
+        </div>
+        <div class="choice-item">
+          <input type="radio" id="cVoice" name="consciousnessRadio" value="声(Voice)に反応" onchange="updateAll()">
+          <label for="cVoice">声(Voice)に反応</label>
+        </div>
+        <div class="choice-item">
+          <input type="radio" id="cPain" name="consciousnessRadio" value="痛み(Pain)に反応" onchange="updateAll()">
+          <label for="cPain">痛み(Pain)に反応</label>
+        </div>
+        <div class="choice-item" style="grid-column: span 2;">
+          <input type="radio" id="cUnresp" name="consciousnessRadio" value="無反応(Unresponsive)" onchange="updateAll()">
+          <label for="cUnresp">無反応 (Unresponsive)</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEWS2 スコア表示カード -->
+    <div class="score-card">
+      <div>
+        <div class="score-title">急変警戒スコア: NEWS2</div>
+        <div class="score-sub" id="news2Details">バイタル所見から自動計算</div>
+      </div>
+      <div style="text-align: right;">
+        <span id="news2Badge" class="score-badge score-badge-low">0点 (低リスク)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 3. 既往歴（20診断・無制限選択可能） -->
+  <div class="card">
+    <div class="card-title">
+      <span>3. 既往歴 (いくつでも選択可能)</span>
+      <span id="historyCountBadge" style="font-size: 12px; color: #0284c7;">選択中: 0個</span>
+    </div>
+    
+    <div class="history-grid">
+      <div class="history-item">
+        <input type="checkbox" id="h1" name="historyCheck" value="高血圧症" onchange="onHistoryChange()">
+        <label for="h1">1. 高血圧症</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h2" name="historyCheck" value="脂質異常症" onchange="onHistoryChange()">
+        <label for="h2">2. 脂質異常症</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h3" name="historyCheck" value="変形性関節症・脊椎疾患" onchange="onHistoryChange()">
+        <label for="h3">3. 変形性関節症・脊椎疾患</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h4" name="historyCheck" value="糖尿病" onchange="onHistoryChange()">
+        <label for="h4">4. 糖尿病</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h5" name="historyCheck" value="骨粗鬆症" onchange="onHistoryChange()">
+        <label for="h5">5. 骨粗鬆症</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h6" name="historyCheck" value="白内障・緑内障" onchange="onHistoryChange()">
+        <label for="h6">6. 白内障・緑内障</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h7" name="historyCheck" value="認知症" onchange="onHistoryChange()">
+        <label for="h7">7. 認知症</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h8" name="historyCheck" value="心房細動などの不整脈" onchange="onHistoryChange()">
+        <label for="h8">8. 心房細動などの不整脈</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h9" name="historyCheck" value="虚血性心疾患" onchange="onHistoryChange()">
+        <label for="h9">9. 虚血性心疾患</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h10" name="historyCheck" value="心不全" onchange="onHistoryChange()">
+        <label for="h10">10. 心不全</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h11" name="historyCheck" value="慢性腎臓病（CKD）" onchange="onHistoryChange()">
+        <label for="h11">11. 慢性腎臓病（CKD）</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h12" name="historyCheck" value="脳血管疾患" onchange="onHistoryChange()">
+        <label for="h12">12. 脳血管疾患</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h13" name="historyCheck" value="悪性腫瘍（がん）" onchange="onHistoryChange()">
+        <label for="h13">13. 悪性腫瘍（がん）</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h14" name="historyCheck" value="前立腺肥大症・排尿障害" onchange="onHistoryChange()">
+        <label for="h14">14. 前立腺肥大症・排尿障害</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h15" name="historyCheck" value="慢性閉塞性肺疾患（COPD）" onchange="onHistoryChange()">
+        <label for="h15">15. 慢性閉塞性肺疾患（COPD）</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h16" name="historyCheck" value="肺炎・誤嚥性肺炎" onchange="onHistoryChange()">
+        <label for="h16">16. 肺炎・誤嚥性肺炎</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h17" name="historyCheck" value="便秘症" onchange="onHistoryChange()">
+        <label for="h17">17. 便秘症</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h18" name="historyCheck" value="うつ病・睡眠障害" onchange="onHistoryChange()">
+        <label for="h18">18. うつ病・睡眠障害</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h19" name="historyCheck" value="フレイル・サルコペニア" onchange="onHistoryChange()">
+        <label for="h19">19. フレイル・サルコペニア</label>
+      </div>
+      <div class="history-item">
+        <input type="checkbox" id="h20" name="historyCheck" value="尿路感染症" onchange="onHistoryChange()">
+        <label for="h20">20. 尿路感染症</label>
+      </div>
+    </div>
+
+    <!-- その他手入力枠 -->
+    <div style="margin-top: 10px;">
+      <div class="choice-item">
+        <input type="checkbox" id="chkOther" onchange="toggleOtherCheckbox()">
+        <label for="chkOther" style="height: 42px;">＋ その他の疾患を手入力する</label>
+      </div>
+      <div id="otherBox" style="display: none; margin-top: 8px; background: #f8fafc; border: 1.5px dashed #94a3b8; border-radius: 6px; padding: 10px;">
+        <label class="field-label" for="otherInput">その他の疾患 (カンマ区切りで複数入力可能)</label>
+        <input type="text" id="otherInput" placeholder="例: 胃ポリープ、緑内障" oninput="updateAll()">
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 状態 & 転倒転落リスク評価 -->
+  <div class="card">
+    <div class="card-title">
+      <span>4. 状態 & 転倒リスク評価</span>
+    </div>
+
+    <div class="fall-risk-list">
+      <div class="fall-check-item">
+        <input type="checkbox" id="fallHistory" onchange="updateAll()">
+        <label for="fallHistory">1) 転倒歴あり (過去1年以内の転倒)</label>
+      </div>
+      <div class="fall-check-item">
+        <input type="checkbox" id="walkDisorder" onchange="toggleWalkDisorder()">
+        <label for="walkDisorder">2) 歩行障害あり (ふらつき、麻痺、補助具要)</label>
+      </div>
+      
+      <!-- 歩行障害ありの場合の移動レベル選択肢 -->
+      <div id="walkDetailBox" style="display: none; background: #f1f5f9; border: 1.5px solid #94a3b8; border-radius: 6px; padding: 10px; margin-left: 10px;">
+        <label class="field-label" style="color:#0f172a; margin-bottom:6px;">歩行障害の詳細・移動手段:</label>
+        <div class="choice-row">
+          <div class="choice-item">
+            <input type="radio" id="wdCane" name="walkToolRadio" value="杖" checked onchange="updateAll()">
+            <label for="wdCane">杖</label>
+          </div>
+          <div class="choice-item">
+            <input type="radio" id="wdWalker" name="walkToolRadio" value="歩行補助器" onchange="updateAll()">
+            <label for="wdWalker">歩行補助器</label>
+          </div>
+          <div class="choice-item">
+            <input type="radio" id="wdWheelchair" name="walkToolRadio" value="車椅子" onchange="updateAll()">
+            <label for="wdWheelchair">車椅子</label>
+          </div>
+          <div class="choice-item">
+            <input type="radio" id="wdBedridden" name="walkToolRadio" value="寝たきり" onchange="updateAll()">
+            <label for="wdBedridden">寝たきり状態</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="fall-check-item">
+        <input type="checkbox" id="cognitiveDecline" onchange="updateAll()">
+        <label for="cognitiveDecline">3) 認知機能低下 (見当識障害・危険不認知)</label>
+      </div>
+      <div class="fall-check-item">
+        <input type="checkbox" id="sleepMeds" onchange="updateAll()">
+        <label for="sleepMeds">4) 睡眠薬内服 (睡眠導入剤・抗不安薬など)</label>
+      </div>
+      <div class="fall-check-item">
+        <input type="checkbox" id="nocturia" onchange="updateAll()">
+        <label for="nocturia">5) 夜間頻尿 (夜間排泄・慌てた移動)</label>
+      </div>
+    </div>
+
+    <!-- 転倒リスク評価結果カード -->
+    <div class="score-card">
+      <div>
+        <div class="score-title">転倒リスク評価</div>
+        <div class="score-sub" id="fallRiskDetails">該当項目: 0個 (0:低、1-3:中等度、4以上:高)</div>
+      </div>
+      <div style="text-align: right;">
+        <span id="fallRiskBadge" class="score-badge score-badge-low">低リスク (0項目)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 同居家族構成 -->
+  <div class="card">
+    <div class="card-title">5. 同居家族構成</div>
+    <div class="chips" style="margin-bottom: 8px;">
+      <button type="button" class="chip" onclick="setFamily('独居（一人暮らし）')">+ 独居</button>
+      <button type="button" class="chip" onclick="setFamily('配偶者と2人暮らし（高齢者世帯）')">+ 配偶者と2人</button>
+      <button type="button" class="chip" onclick="setFamily('配偶者および子と同居')">+ 配偶者・子と同居</button>
+      <button type="button" class="chip" onclick="setFamily('長男家族と同居')">+ 長男家族</button>
+      <button type="button" class="chip" onclick="setFamily('施設入所中')">+ 施設入所中</button>
+    </div>
+    <input type="text" id="familyInput" placeholder="例: 妻（70代）と2人暮らし。日中は妻が見守り。" oninput="updateAll()">
+  </div>
+
+  <!-- 6. 本日の症状・看護観察所見 -->
+  <div class="card">
+    <div class="card-title">6. 本日の症状・看護観察所見・主訴</div>
+    <div class="chips" style="margin-bottom: 8px;">
+      <button type="button" class="chip" onclick="addSymptom('微熱・倦怠感あり。')">+ 微熱・倦怠感</button>
+      <button type="button" class="chip" onclick="addSymptom('食欲低下、水分摂取量が普段の半分程度。')">+ 食欲低下</button>
+      <button type="button" class="chip" onclick="addSymptom('歩行時ふらつき・転倒リスクの懸念あり。')">+ ふらつき転倒</button>
+      <button type="button" class="chip" onclick="addSymptom('両下腿に圧痕性浮腫（+）。')">+ 下腿浮腫</button>
+      <button type="button" class="chip" onclick="addSymptom('労作時軽度息切れ、SpO2低下あり。')">+ 息切れ</button>
+    </div>
+    <textarea id="symptomsInput" placeholder="本日の訴えやバイタル変化、看護師の観察所見を記載してください。" oninput="updateAll()"></textarea>
+  </div>
+
+  <!-- 7. AIプロンプト作成 & 送信先選択 -->
+  <div class="card">
+    <div class="card-title">
+      <span>7. AI送信プロンプト生成</span>
+    </div>
+
+    <!-- AIモデル選択 (ChatGPT / Claude / Copilot) -->
+    <div class="ai-selector">
+      <div style="font-size: 13px; font-weight: bold; color: #1e293b;">
+        送信先AIモデルの選択:
+      </div>
+      <div class="ai-tabs">
+        <div class="ai-tab-item">
+          <input type="radio" id="aiChatGPT" name="targetAiRadio" value="ChatGPT" checked onchange="onAiTargetChange()">
+          <label for="aiChatGPT">ChatGPT</label>
+        </div>
+        <div class="ai-tab-item">
+          <input type="radio" id="aiClaude" name="targetAiRadio" value="Claude" onchange="onAiTargetChange()">
+          <label for="aiClaude">Claude</label>
+        </div>
+        <div class="ai-tab-item">
+          <input type="radio" id="aiCopilot" name="targetAiRadio" value="Copilot" onchange="onAiTargetChange()">
+          <label for="aiCopilot">Copilot</label>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 4px; font-size: 11px; color: #92400e; margin-bottom: 8px;">
+      【指定冒頭文が自動挿入されています】<br>
+      「あなたはプロの看護師です。この患者のケアーで、必要なアドバイスをお願いします。答えは日本語でお願い致します。」
+    </div>
+
+    <textarea id="promptOutput" class="prompt-box" readonly></textarea>
+
+    <!-- コピー完了通知トースト -->
+    <div id="copyToast" style="display: none; background: #059669; color: white; padding: 10px 14px; border-radius: 6px; text-align: center; font-size: 14px; font-weight: bold; margin-top: 10px;">
+      ✓ プロンプトをクリップボードにコピーしました！
+    </div>
+
+    <!-- コピー & AIリンク -->
+    <div class="action-container">
+      <button type="button" class="btn-copy" onclick="copyPrompt(true)">
+        📋 プロンプトをコピーする
+      </button>
+      <a id="btnOpenAi" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="btn-open-ai" onclick="silentCopyAndOpen(event, '_blank')">
+        🚀 ChatGPT を開く (新しいタブ)
+      </a>
+      <a id="btnOpenAiSame" href="https://chatgpt.com/" class="btn-open-ai-same" onclick="silentCopyAndOpen(event, '_self')">
+        🔗 ChatGPT を開く (この画面から直接移動)
+      </a>
+    </div>
+    <div style="font-size: 11px; color: #64748b; text-align: center; margin-top: 8px; line-height: 1.4;">
+      ※「AIを開く」を押すとプロンプトが自動でコピーされ、選択中のAI画面が開きます。
+    </div>
+  </div>
+
+  <script>
+    // PWA Service Worker 登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js').then(function(reg) {
+          console.log('ServiceWorker 登録成功:', reg.scope);
+        }).catch(function(err) {
+          console.log('ServiceWorker 登録失敗:', err);
+        });
+      });
+    }
+
+    // 初期実行
+    window.onload = function() {
+      // iOS Safari等のホーム画面追加案内表示チェック
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        var banner = document.getElementById('pwaBanner');
+        if (banner) banner.style.display = 'flex';
+      }
+      updateAll();
+    };
+
+    function showPwaGuide() {
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        alert("【iPhoneでのアプリアイコン追加方法】\nSafari画面下の「共有ボタン（四角から矢印）」をタップし、「ホーム画面に追加」を選んでください。電波の届かない院内でもアプリとして起動できます。");
+      } else {
+        alert("【Androidでのアプリアイコン追加方法】\nChromeメニュー（右上3点）をタップし、「アプリをインストール」または「ホーム画面に追加」を選んでください。");
+      }
+    }
+
+    // 動作テスト用サンプルデータ投入
+    function runTest() {
+      // 性別: 男性
+      var gRadio = document.getElementById('gM');
+      if (gRadio) gRadio.checked = true;
+
+      // 基本バイタル & 身体計測
+      document.getElementById('ageInput').value = "78";
+      document.getElementById('heightInput').value = "162.0";
+      document.getElementById('weightInput').value = "54.0";
+      document.getElementById('bpSysInput').value = "146";
+      document.getElementById('bpDiaInput').value = "88";
+      document.getElementById('hrInput').value = "82";
+      document.getElementById('respInput').value = "18";
+      document.getElementById('tempInput').value = "36.8";
+      document.getElementById('spo2Input').value = "95";
+
+      // 酸素条件: 室内空気
+      var o2Radio = document.getElementById('o2Air');
+      if (o2Radio) o2Radio.checked = true;
+      document.getElementById('o2FlowRow').style.display = 'none';
+
+      // 意識レベル: 清明
+      var cAlert = document.getElementById('cAlert');
+      if (cAlert) cAlert.checked = true;
+
+      // 既往歴の選択リセット後、サンプル疾患をチェック
+      var sampleList = ["高血圧症", "心不全", "骨粗鬆症", "変形性関節症・脊椎疾患"];
+      var cbs = document.querySelectorAll('input[name="historyCheck"]');
+      for (var i = 0; i < cbs.length; i++) {
+        cbs[i].checked = (sampleList.indexOf(cbs[i].value) >= 0);
+      }
+
+      // その他疾患
+      var chkOther = document.getElementById('chkOther');
+      chkOther.checked = true;
+      document.getElementById('otherBox').style.display = 'block';
+      document.getElementById('otherInput').value = "胃ポリープ";
+
+      // 状態 & 転倒リスク項目
+      document.getElementById('fallHistory').checked = true; // 1) 転倒歴あり
+      document.getElementById('walkDisorder').checked = true; // 2) 歩行障害あり
+      document.getElementById('walkDetailBox').style.display = 'block';
+      document.getElementById('wdCane').checked = true; // 杖
+      document.getElementById('cognitiveDecline').checked = false;
+      document.getElementById('sleepMeds').checked = true; // 4) 睡眠薬内服
+      document.getElementById('nocturia').checked = true; // 5) 夜間頻尿 (計4項目 = 高リスク)
+
+      // 家族・症状
+      document.getElementById('familyInput').value = "妻（70代）と2人暮らし。日中は妻が見守り。長男は県外在住。";
+      document.getElementById('symptomsInput').value = "2日前から朝の食欲が低下し水分摂取も半減。起床時にふらつきあり。両下腿に軽度圧痕性浮腫（+）。胸痛等は否定。活気がやや低下。夜間トイレに2〜3回起きる。";
+
+      updateAll();
+      showToast("✓ サンプルデータを入力しました！");
+    }
+
+    // 酸素条件変更時のUI切り替え
+    function onOxygenChange() {
+      var isO2 = document.getElementById('o2Inhale').checked;
+      document.getElementById('o2FlowRow').style.display = isO2 ? 'flex' : 'none';
+      updateAll();
+    }
+
+    function setO2Flow(val) {
+      document.getElementById('o2FlowInput').value = val;
+      updateAll();
+    }
+
+    // 既往歴変更時
+    function onHistoryChange() {
+      updateAll();
+    }
+
+    // その他チェックボックス切り替え
+    function toggleOtherCheckbox() {
+      var chk = document.getElementById('chkOther');
+      var box = document.getElementById('otherBox');
+      box.style.display = chk.checked ? 'block' : 'none';
+      if (!chk.checked) {
+        document.getElementById('otherInput').value = '';
+      }
+      updateAll();
+    }
+
+    // 歩行障害チェック切り替え
+    function toggleWalkDisorder() {
+      var chk = document.getElementById('walkDisorder');
+      var box = document.getElementById('walkDetailBox');
+      box.style.display = chk.checked ? 'block' : 'none';
+      updateAll();
+    }
+
+    // AIターゲット変更時のリンク & ボタンスタイル更新
+    function onAiTargetChange() {
+      var checkedAi = document.querySelector('input[name="targetAiRadio"]:checked');
+      var aiName = checkedAi ? checkedAi.value : "ChatGPT";
+
+      var btnOpen = document.getElementById('btnOpenAi');
+      var btnOpenSame = document.getElementById('btnOpenAiSame');
+
+      var targetUrl = "https://chatgpt.com/";
+      var btnBg = "#10a37f";
+
+      if (aiName === "Claude") {
+        targetUrl = "https://claude.ai/new";
+        btnBg = "#c2410c";
+      } else if (aiName === "Copilot") {
+        targetUrl = "https://copilot.microsoft.com/";
+        btnBg = "#0284c7";
+      }
+
+      btnOpen.href = targetUrl;
+      btnOpen.style.background = btnBg;
+      btnOpen.innerText = "🚀 " + aiName + " を開く (新しいタブ)";
+
+      btnOpenSame.href = targetUrl;
+      btnOpenSame.innerText = "🔗 " + aiName + " を開く (この画面から直接移動)";
+
+      updateAll();
+    }
+
+    // クイック入力補助
+    function setAge(a) { document.getElementById('ageInput').value = a; updateAll(); }
+    function setBp(s, d) { document.getElementById('bpSysInput').value = s; document.getElementById('bpDiaInput').value = d; updateAll(); }
+    function setHr(val) { document.getElementById('hrInput').value = val; updateAll(); }
+    function setResp(val) { document.getElementById('respInput').value = val; updateAll(); }
+    function setTemp(val) { document.getElementById('tempInput').value = val; updateAll(); }
+    function setSpo2(val) { document.getElementById('spo2Input').value = val; updateAll(); }
+    function setFamily(txt) { document.getElementById('familyInput').value = txt; updateAll(); }
+
+    function addSymptom(txt) {
+      var area = document.getElementById('symptomsInput');
+      if (area.value.trim() === "") {
+        area.value = txt;
+      } else {
+        area.value = area.value.trim() + " " + txt;
+      }
+      updateAll();
+    }
+
+    function toDecade(ageNum) {
+      var n = parseInt(ageNum, 10);
+      if (isNaN(n)) return "年齢不詳";
+      if (n < 10) return "10歳未満";
+      if (n >= 100) return "100歳以上";
+      var dec = Math.floor(n / 10) * 10;
+      var sub = (n % 10 >= 5) ? "後半" : "前半";
+      return dec + "代" + sub;
+    }
+
+    // ========================================================
+    // 1. バイタル異常チェック (赤色警告)
+    // ========================================================
+    function checkVitalAbnormalities() {
+      var alerts = [];
+
+      // SpO2 < 90%
+      var spo2El = document.getElementById('spo2Input');
+      var spo2 = parseFloat(spo2El.value);
+      if (!isNaN(spo2) && spo2 < 90) {
+        alerts.push("SpO2低下: " + spo2 + "% (<90%)");
+        spo2El.classList.add('input-abnormal');
+      } else {
+        spo2El.classList.remove('input-abnormal');
+      }
+
+      // HR > 120 or HR < 40
+      var hrEl = document.getElementById('hrInput');
+      var hr = parseFloat(hrEl.value);
+      if (!isNaN(hr)) {
+        if (hr > 120) {
+          alerts.push("頻脈(HR): " + hr + " bpm (>120)");
+          hrEl.classList.add('input-abnormal');
+        } else if (hr < 40) {
+          alerts.push("徐脈(HR): " + hr + " bpm (<40)");
+          hrEl.classList.add('input-abnormal');
+        } else {
+          hrEl.classList.remove('input-abnormal');
+        }
+      } else {
+        hrEl.classList.remove('input-abnormal');
+      }
+
+      // SBP > 180 or SBP < 90
+      var sbpEl = document.getElementById('bpSysInput');
+      var sbp = parseFloat(sbpEl.value);
+      if (!isNaN(sbp)) {
+        if (sbp > 180) {
+          alerts.push("高血圧(SBP): " + sbp + " mmHg (>180)");
+          sbpEl.classList.add('input-abnormal');
+        } else if (sbp < 90) {
+          alerts.push("低血圧(SBP): " + sbp + " mmHg (<90)");
+          sbpEl.classList.add('input-abnormal');
+        } else {
+          sbpEl.classList.remove('input-abnormal');
+        }
+      } else {
+        sbpEl.classList.remove('input-abnormal');
+      }
+
+      // 呼吸数 > 28
+      var respEl = document.getElementById('respInput');
+      var resp = parseFloat(respEl.value);
+      if (!isNaN(resp) && resp > 28) {
+        alerts.push("頻呼吸: " + resp + " 回/分 (>28)");
+        respEl.classList.add('input-abnormal');
+      } else {
+        respEl.classList.remove('input-abnormal');
+      }
+
+      // 警告表示更新
+      var alertBox = document.getElementById('vitalAlertBox');
+      var alertList = document.getElementById('vitalAlertList');
+      if (alerts.length > 0) {
+        alertList.innerHTML = alerts.map(function(a) {
+          return '<span class="vital-alert-item">' + a + '</span>';
+        }).join('');
+        alertBox.style.display = 'block';
+      } else {
+        alertBox.style.display = 'none';
+      }
+
+      return alerts;
+    }
+
+    // ========================================================
+    // 2. NEWS2スコア計算 (0-4:低、5-6:中等度、7以上:高)
+    // ========================================================
+    function calculateNEWS2() {
+      var score = 0;
+      var points = [];
+
+      // 呼吸数
+      var resp = parseFloat(document.getElementById('respInput').value);
+      if (!isNaN(resp)) {
+        if (resp <= 8) { score += 3; points.push("呼吸≤8(+3)"); }
+        else if (resp <= 11) { score += 1; points.push("呼吸9-11(+1)"); }
+        else if (resp <= 20) { /* 0点 */ }
+        else if (resp <= 24) { score += 2; points.push("呼吸21-24(+2)"); }
+        else { score += 3; points.push("呼吸≥25(+3)"); }
+      }
+
+      // SpO2 (スケール1)
+      var spo2 = parseFloat(document.getElementById('spo2Input').value);
+      if (!isNaN(spo2)) {
+        if (spo2 <= 91) { score += 3; points.push("SpO2≤91%(+3)"); }
+        else if (spo2 <= 93) { score += 2; points.push("SpO2 92-93%(+2)"); }
+        else if (spo2 <= 95) { score += 1; points.push("SpO2 94-95%(+1)"); }
+        else { /* ≥96: 0点 */ }
+      }
+
+      // 酸素吸入
+      var isO2 = document.getElementById('o2Inhale') && document.getElementById('o2Inhale').checked;
+      if (isO2) {
+        score += 2;
+        points.push("酸素吸入あり(+2)");
+      }
+
+      // SBP
+      var sbp = parseFloat(document.getElementById('bpSysInput').value);
+      if (!isNaN(sbp)) {
+        if (sbp <= 90) { score += 3; points.push("SBP≤90(+3)"); }
+        else if (sbp <= 100) { score += 2; points.push("SBP 91-100(+2)"); }
+        else if (sbp <= 110) { score += 1; points.push("SBP 101-110(+1)"); }
+        else if (sbp <= 219) { /* 0点 */ }
+        else { score += 3; points.push("SBP≥220(+3)"); }
+      }
+
+      // HR
+      var hr = parseFloat(document.getElementById('hrInput').value);
+      if (!isNaN(hr)) {
+        if (hr <= 40) { score += 3; points.push("HR≤40(+3)"); }
+        else if (hr <= 50) { score += 1; points.push("HR 41-50(+1)"); }
+        else if (hr <= 90) { /* 0点 */ }
+        else if (hr <= 110) { score += 1; points.push("HR 91-110(+1)"); }
+        else if (hr <= 130) { score += 2; points.push("HR 111-130(+2)"); }
+        else { score += 3; points.push("HR≥131(+3)"); }
+      }
+
+      // 意識レベル (ACVPU)
+      var cChecked = document.querySelector('input[name="consciousnessRadio"]:checked');
+      var cVal = cChecked ? cChecked.value : "清明(Alert)";
+      if (cVal !== "清明(Alert)") {
+        score += 3;
+        points.push("意識変容(+3)");
+      }
+
+      // 体温
+      var temp = parseFloat(document.getElementById('tempInput').value);
+      if (!isNaN(temp)) {
+        if (temp <= 35.0) { score += 3; points.push("体温≤35.0(+3)"); }
+        else if (temp <= 36.0) { score += 1; points.push("体温35.1-36.0(+1)"); }
+        else if (temp <= 38.0) { /* 0点 */ }
+        else if (temp <= 39.0) { score += 1; points.push("体温38.1-39.0(+1)"); }
+        else { score += 2; points.push("体温≥39.1(+2)"); }
+      }
+
+      var risk = "低リスク";
+      var badgeClass = "score-badge score-badge-low";
+      if (score >= 7) {
+        risk = "高リスク";
+        badgeClass = "score-badge score-badge-high";
+      } else if (score >= 5) {
+        risk = "中等度リスク";
+        badgeClass = "score-badge score-badge-med";
+      }
+
+      // バッジ更新
+      var badgeEl = document.getElementById('news2Badge');
+      var detailsEl = document.getElementById('news2Details');
+      if (badgeEl) {
+        badgeEl.className = badgeClass;
+        badgeEl.innerText = score + "点 (" + risk + ")";
+      }
+      if (detailsEl) {
+        detailsEl.innerText = points.length > 0 ? ("加点内訳: " + points.join('、 ')) : "全項目基準値内 (0点)";
+      }
+
+      return { score: score, risk: risk, points: points };
+    }
+
+    // ========================================================
+    // 3. 転倒リスク評価 (0:低、1-3:中等度、4以上:高)
+    // ========================================================
+    function calculateFallRisk() {
+      var count = 0;
+      var activeItems = [];
+
+      if (document.getElementById('fallHistory') && document.getElementById('fallHistory').checked) {
+        count++;
+        activeItems.push("転倒歴あり");
+      }
+
+      var isWalkDisorder = document.getElementById('walkDisorder') && document.getElementById('walkDisorder').checked;
+      var walkDetailStr = "自立歩行（障害なし）";
+      if (isWalkDisorder) {
+        count++;
+        var wRadio = document.querySelector('input[name="walkToolRadio"]:checked');
+        var wVal = wRadio ? wRadio.value : "杖";
+        walkDetailStr = wVal + "（歩行障害あり）";
+        activeItems.push("歩行障害あり(" + wVal + ")");
+      }
+
+      if (document.getElementById('cognitiveDecline') && document.getElementById('cognitiveDecline').checked) {
+        count++;
+        activeItems.push("認知機能低下");
+      }
+      if (document.getElementById('sleepMeds') && document.getElementById('sleepMeds').checked) {
+        count++;
+        activeItems.push("睡眠薬内服");
+      }
+      if (document.getElementById('nocturia') && document.getElementById('nocturia').checked) {
+        count++;
+        activeItems.push("夜間頻尿");
+      }
+
+      var risk = "低リスク";
+      var badgeClass = "score-badge score-badge-low";
+      if (count >= 4) {
+        risk = "高リスク";
+        badgeClass = "score-badge score-badge-high";
+      } else if (count >= 1) {
+        risk = "中等度リスク";
+        badgeClass = "score-badge score-badge-med";
+      }
+
+      var badgeEl = document.getElementById('fallRiskBadge');
+      var detailsEl = document.getElementById('fallRiskDetails');
+      if (badgeEl) {
+        badgeEl.className = badgeClass;
+        badgeEl.innerText = risk + " (" + count + "項目該当)";
+      }
+      if (detailsEl) {
+        detailsEl.innerText = activeItems.length > 0 ? ("陽性項目: " + activeItems.join('、 ')) : "該当項目なし (0個)";
+      }
+
+      return { count: count, risk: risk, items: activeItems, walkDetailStr: walkDetailStr };
+    }
+
+    // ========================================================
+    // メイン更新関数 (BMI・アラート・NEWS2・転倒・プロンプト)
+    // ========================================================
+    function updateAll() {
+      // 1. BMI計算
+      var h = parseFloat(document.getElementById('heightInput').value);
+      var w = parseFloat(document.getElementById('weightInput').value);
+
+      var bmiDisp = document.getElementById('bmiDisplay');
+      var badgeDisp = document.getElementById('bmiBadge');
+      var idealDisp = document.getElementById('idealWeightText');
+
+      var bmiVal = "--.-";
+      var catVal = "未入力";
+      var idealVal = "-";
+
+      if (!isNaN(h) && !isNaN(w) && h > 0 && w > 0) {
+        var hm = h / 100.0;
+        var bmi = w / (hm * hm);
+        bmiVal = bmi.toFixed(1);
+        idealVal = (22.0 * hm * hm).toFixed(1);
+
+        if (bmi < 18.5) catVal = "低体重(やせ)";
+        else if (bmi < 25.0) catVal = "普通体重";
+        else if (bmi < 30.0) catVal = "肥満(1度)";
+        else if (bmi < 35.0) catVal = "肥満(2度)";
+        else catVal = "高度肥満(3度以上)";
+
+        bmiDisp.innerText = bmiVal;
+        badgeDisp.innerText = catVal;
+        idealDisp.innerText = idealVal;
+      } else {
+        bmiDisp.innerText = "--.-";
+        badgeDisp.innerText = "未入力";
+        idealDisp.innerText = "-";
+      }
+
+      // 2. バイタル異常チェック & NEWS2 & 転倒リスク
+      var vitalAlerts = checkVitalAbnormalities();
+      var news2Result = calculateNEWS2();
+      var fallResult = calculateFallRisk();
+
+      // 3. 患者基本情報
+      var checkedGender = document.querySelector('input[name="genderRadio"]:checked');
+      var currentGender = checkedGender ? checkedGender.value : "男性";
+
+      var ageRaw = document.getElementById('ageInput').value.trim();
+      var ageText = ageRaw ? (toDecade(ageRaw) + "（匿名化）") : "未入力";
+
+      var physiqueText = "未入力";
+      var hRaw = document.getElementById('heightInput').value.trim();
+      var wRaw = document.getElementById('weightInput').value.trim();
+      if (hRaw && wRaw && bmiVal !== "--.-") {
+        physiqueText = "身長 " + hRaw + " cm / 体重 " + wRaw + " kg / BMI " + bmiVal + "（判定: " + catVal + "、適正体重: 約" + idealVal + "kg）";
+      } else if (hRaw || wRaw) {
+        physiqueText = "身長: " + (hRaw || '未入力') + "cm, 体重: " + (wRaw || '未入力') + "kg";
+      }
+
+      // バイタルテキスト
+      var sys = document.getElementById('bpSysInput').value.trim();
+      var dia = document.getElementById('bpDiaInput').value.trim();
+      var bpText = "未測定";
+      if (sys && dia) bpText = sys + " / " + dia + " mmHg";
+      else if (sys) bpText = "収縮期 " + sys + " mmHg";
+
+      var hr = document.getElementById('hrInput').value.trim();
+      var hrText = hr ? (hr + " bpm (回/分)") : "未測定";
+
+      var resp = document.getElementById('respInput').value.trim();
+      var respText = resp ? (resp + " 回/分") : "未測定";
+
+      var temp = document.getElementById('tempInput').value.trim();
+      var tempText = temp ? (temp + " ℃") : "未測定";
+
+      var spo2 = document.getElementById('spo2Input').value.trim();
+      var isO2Inhale = document.getElementById('o2Inhale').checked;
+      var o2Cond = "";
+      if (isO2Inhale) {
+        var flowVal = document.getElementById('o2FlowInput') ? document.getElementById('o2FlowInput').value.trim() : "";
+        o2Cond = flowVal ? ("（O2吸入 " + flowVal + "L/分）") : "（O2吸入）";
+      } else {
+        o2Cond = "（室内空気）";
+      }
+      var spo2Text = spo2 ? (spo2 + " % " + o2Cond) : ("未測定 " + o2Cond);
+
+      var cChecked = document.querySelector('input[name="consciousnessRadio"]:checked');
+      var consciousnessText = cChecked ? cChecked.value : "清明(Alert)";
+
+      // 既往歴
+      var selectedH = [];
+      var cbs = document.querySelectorAll('input[name="historyCheck"]:checked');
+      for (var i = 0; i < cbs.length; i++) {
+        selectedH.push(cbs[i].value);
+      }
+      var chkOther = document.getElementById('chkOther');
+      var otherVal = document.getElementById('otherInput').value.trim();
+      if (chkOther && chkOther.checked && otherVal) {
+        selectedH.push(otherVal);
+      }
+      document.getElementById('historyCountBadge').innerText = "選択中: " + selectedH.length + "個";
+      var hText = selectedH.length > 0 ? selectedH.join('、 ') : "特記すべき既往歴なし（未選択）";
+
+      var fam = document.getElementById('familyInput').value.trim() || "記載なし";
+      var sym = document.getElementById('symptomsInput').value.trim() || "本日の特異的な訴えの記載なし";
+
+      // AI送信先
+      var checkedAi = document.querySelector('input[name="targetAiRadio"]:checked');
+      var targetAi = checkedAi ? checkedAi.value : "ChatGPT";
+
+      // 4. プロンプト生成 (厳格冒頭文保持)
+      var MANDATORY = "あなたはプロの看護師です。この患者のケアーで、必要なアドバイスをお願いします。答えは日本語でお願い致します。";
+
+      var alertPromptSection = "";
+      if (vitalAlerts.length > 0) {
+        alertPromptSection = "⚠️ 【バイタル異常警告】\n" + vitalAlerts.map(function(a) { return "・" + a; }).join('\n') + "\n\n";
+      }
+
+      var prompt = MANDATORY + "\n\n" +
+"---" + "\n" +
+"### 【患者基本情報（匿名化配慮）】" + "\n" +
+"- 対象者: " + ageText + "・" + currentGender + "\n" +
+"- 体格・BMI: " + physiqueText + "\n" +
+"- バイタルサイン:" + "\n" +
+"  - 血圧: " + bpText + "\n" +
+"  - 心拍数: " + hrText + "\n" +
+"  - 呼吸数: " + respText + "\n" +
+"  - 体温: " + tempText + "\n" +
+"  - SpO2: " + spo2Text + "\n" +
+"  - 意識レベル(ACVPU): " + consciousnessText + "\n" +
+"- 急変警戒スコア: NEWS2 " + news2Result.score + "点（" + news2Result.risk + "）\n" +
+"- 状態・移動レベル: " + fallResult.walkDetailStr + "\n" +
+"- 転倒転落リスク評価: " + fallResult.risk + "（該当項目 " + fallResult.count + "個: " + (fallResult.items.join('、 ') || "該当なし") + "）\n" +
+"- 既往歴: " + hText + "\n" +
+"- 生活環境・同居家族構成: " + fam + "\n\n" +
+alertPromptSection +
+"### 【本日の症状・主訴・看護観察所見】" + "\n" +
+sym + "\n\n" +
+"---" + "\n" +
+"### 【看護師からの相談・依頼事項】" + "\n" +
+"上記の患者情報およびNEWS2スコア、転倒リスク、バイタルサイン、本日の状態を踏まえ、看護業務を抜け漏れなく、安全かつスムーズに遂行するために、以下の観点から具体的かつ実践的なアドバイスをお願いします。" + "\n\n" +
+"1. 優先度の高い観察ポイント（フィジカルアセスメント）" + "\n" +
+"   - 本日のバイタル(血圧・心拍数・呼吸数・体温・SpO2・意識)、NEWS2スコア(" + news2Result.score + "点)、既往歴から予測される急変の初期兆候" + "\n" +
+"2. 本日の看護ケア上の留意点・具体的アプローチ" + "\n" +
+"   - 患者の状態（" + fallResult.walkDetailStr + "）および転倒リスク（" + fallResult.risk + "）に即した転倒転落予防策、移動介助、安楽なケア" + "\n" +
+"3. 医師や多職種へのエスカレーション基準" + "\n" +
+"   - 直ちに医師への報告・診察依頼が必要な危険サイン（NEWS2高値、SpO2低下、血圧・脈拍急変など）" + "\n" +
+"4. 患者本人および同居家族への支援・声かけ" + "\n" +
+"   - 不安緩和や在宅・病棟での安全確保、見守り上の注意点" + "\n";
+
+      document.getElementById('promptOutput').value = prompt;
+    }
+
+    // トースト通知表示
+    function showToast(msg) {
+      var toast = document.getElementById('copyToast');
+      if (toast) {
+        toast.innerText = msg;
+        toast.style.display = 'block';
+        if (window._toastTimer) clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(function() {
+          toast.style.display = 'none';
+        }, 4000);
+      }
+    }
+
+    // クリップボードコピー
+    function copyToClipboardRaw(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(function() {
+          fallbackCopy();
+        });
+      } else {
+        fallbackCopy();
+      }
+    }
+
+    function fallbackCopy() {
+      var box = document.getElementById('promptOutput');
+      if (!box) return;
+      box.focus();
+      box.select();
+      box.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy');
+      } catch (e) {
+        // フォールバック失敗時は何もしない
+      }
+    }
+
+    function copyPrompt(showNotice) {
+      var box = document.getElementById('promptOutput');
+      if (!box || !box.value) {
+        if (showNotice) showToast("⚠️ コピーするプロンプトがありません。");
+        return;
+      }
+      copyToClipboardRaw(box.value);
+      if (showNotice) {
+        var checkedAi = document.querySelector('input[name="targetAiRadio"]:checked');
+        var aiName = checkedAi ? checkedAi.value : "ChatGPT";
+        showToast("✓ プロンプトをクリップボードにコピーしました！" + aiName + "に貼り付けてください。");
+      }
+    }
+
+    function silentCopyAndOpen(event, target) {
+      var box = document.getElementById('promptOutput');
+      if (box && box.value) {
+        copyToClipboardRaw(box.value);
+        var checkedAi = document.querySelector('input[name="targetAiRadio"]:checked');
+        var aiName = checkedAi ? checkedAi.value : "ChatGPT";
+        showToast("✓ コピーしました！" + aiName + " へ移動します…");
+      }
+      if (target === '_self') {
+        if (event) {
+          event.preventDefault();
+        }
+        var btn = document.getElementById('btnOpenAiSame');
+        window.location.href = btn ? btn.href : "https://chatgpt.com/";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "看護業務支援システム",
+  "short_name": "看護AI支援",
+  "description": "看護業務を抜け漏れなく安全に行うための支援システム（バイタル・NEWS2・転倒リスク・AIプロンプト作成）",
+  "start_url": "./看護業務支援アプリ_モバイル版.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0284c7",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
